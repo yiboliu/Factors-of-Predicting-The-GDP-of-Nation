@@ -1,0 +1,238 @@
+```{r, echo=FALSE}
+data <- read.table("Stat project data.txt", sep="", stringsAsFactors=FALSE, header = TRUE)
+data$gro = factor(data$gro)
+
+```
+**Creating a model with the base variables**
+Using backwards elimination on the full model, we continuously removed variables with p-values greater than 0.1 to create an efficient model.
+We arrived at the model
+gdp ~ bir + lem + gro + dep
+which granted an AIC of 1877 and an adjusted R^2 of 0.7867 (both values could be smaller with additional variables, but only minimally so). The step function included the age variable as well which provided a small decrease to AIC and increase to adj-R^2.
+
+Nevertheless, neither model suffices as our residual plot features clear indicators of unequal variance and a lack of model fit.
+
+```{r, echo = FALSE}
+
+out= lm(gdp ~ bir + lem + gro + dep, data)
+plot(fitted(out), resid(out), ylab = "Residuals", xlab= "Fitted Values", main = "Ill-fitted Model")
+summary(out)
+```
+
+
+**Transforming GDP**
+With the goal of producing a more reasonable residual plot, we took to transforming the output GDP variable. A log-based transformation proved to hold the most merit.
+Again using backwards elimination at a cutoff of 0.1, we end up with
+out= lm(log(gdp)~lef+gro+dep, data)
+It has an AIC of 209.9305 and an aj-R^2 of 0.833.
+
+The residul plot is much nicer, but features a right end with lower variance than the rest of the plot.
+
+```{r, echo = FALSE}
+
+out= lm(log(gdp) ~ lef+gro+dep, data)
+summary(out)
+plot(fitted(out), resid(out), ylab = "Residuals", xlab= "Fitted Values", main = "Log Model", pch = c(data$gro), col = c(data$gro))
+legend("bottomright", legend = c("Eastern Europe","South America", "Combo", "Middle East", "Asia", "Africa"), col = c("Black", "Red", "Green", "Blue", "Light Blue", "Pink"), cex = .4, pch = c(1, 2, 3, 4, 5, 6))
+plot(out)
+```
+
+
+
+**Including Interactions**
+
+Using our intuition, the most logical interactions all involve the effect of groups on our base variables. 
+
+INTERACTIONS
+```{r, echo=FALSE}
+
+out = lm(formula = log(gdp) ~ dea+gro + pop + dep +gro*dea, data)
+plot(fitted(out), resid(out), ylab = "Residuals", xlab= "Fitted Values", main = "Log Model", pch = c(data$gro), col = c(data$gro))
+legend("bottomright", legend = c("Eastern Europe","South America", "Combo", "Middle East", "Asia", "Africa"), col = c("Black", "Red", "Green", "Blue", "Light Blue", "Pink"), cex = .4, pch = c(1, 2, 3, 4, 5, 6))
+
+```
+In an aim to increase the effectiveness of our model, we added interaction variables. Logically, the easily observable interactions come from the effects each variable has and how that differs from country group to country group. Thus, we added interactions between group and every other variable. From there, we used backwards elimination using 0.1 as a cutoff point. As before, we opted for model efficiency over minsicule quality increases. There are slightly lower AICs and slightly higher adjusted R^2s, but for economic purposes, we opt for the smaller model. 
+
+We find the model shown below, with an AIC of 207.171.
+```{r, echo=FALSE}
+summary(out)
+plot(out)
+```
+Its AIC and adjusted R^2 are nearly the same, which makes this model suffer as it has more variables. However, this model has better plots with a less pronounced fan shape in the residual plot and a better normal plot.
+Making a judgement between the two is a matter of efficiency versus soundness of model. The second model with interactions is better, marginally, in every way, but at the expense of simplicity--again marginally.
+
+As we can see from both of our complete models, the group that clumps to the right and has the smallest variance comes from our combo group. Accompanied with this is the clear indication that groups are significantly related to their respective countries' GDP per capita values. Our factored group variable is extremely significant in both interactions and as a base variable. Our next step is to isolate the groups and evaluate models that best fit each. 
+
+
+Creating Individual Models for Each Group
+
+EVALUATING EASTERN EUROPE
+
+As we have with every model thus far, we use p-value backwards elimination with a 0.1 cutoff to create our favored models.
+
+
+outest = lm(gdp~dea+lem+pop+age+dep, est)
+
+We arrive at this model which features a few of the base variables and a markedly high adjusted R^2 value of 0.9925 and an AIC of 159.6315. The step function creates the same model with infant mortality and female life expectancy still present, rendering an AIC of 157. However, both of those variables had p-values higher than .1 and thus create a slightly better, but notably less efficient model. So we stick with our backwards elimination-bred structure.
+
+What is notable here, however is the effect of East Germany on the model. It carries a large GDP per capita in comparison to the rest of Eastern Europe, and therefore is very influential on the dataset. The normal plot has a slight err to it. Residuals are spread evenly in the clumped area of the countries with smaller GDP. East Germany, however is fitted rather precisely as is observed from its small residual.
+```{r, echo=FALSE}
+est = data[1:11, ]
+outest = lm(gdp~dea+lem+pop+age+dep, est)
+plot(fitted(outest), resid(outest), xlab= 'Fitted Values', ylab = 'Residuals')
+estres = rstandard(outest)
+qqnorm(estres, xlab = 'Theoretical Quantiles', ylab = 'Standardized Residuals', main = 'With East Germany')
+```
+
+To test the 'contribution' that the former East Germany has on the model, we test the same formula without it. Removing East Germany and running the same model lowers the adjusted R^2 to 0.9506 and lowers AIC to 144.9833, so the model, and its components, remain sound. The residual plot Remains similar, with the smaller GDP countries showing a more even spread and the higher GDP carrying more influence and therefore being more accurately predicted. The normal plot is much straighter, however.
+
+```{r, echo=FALSE}
+outest = lm(gdp~dea+lem+pop+age+dep, est[-4, ])
+plot(fitted(outest), resid(outest), xlab= 'Fitted Values', ylab = 'Residuals')
+estres = rstandard(outest)
+qqnorm(estres, xlab = 'Theoretical Quantiles', ylab = 'Standardized Residuals', main = 'Without East Germany')
+```
+
+
+
+INT   DEA   LEM   POP     AGE     DEP
+8387  1179  493 -0.03208  -908.4  -291.67 
+
+12180 1498  566.1 -372.7  -1158  -341.5
+
+
+Multi-colinearity proves a non-factor:
+
+     dea      lem      pop      age      dep 
+1.928555 1.518601 2.101974 2.590852 2.227930 
+
+
+STUDYING SOUTH AMERICA
+
+Our favored model through backwards elimination is 
+
+lm(formula = gdp ~ lef + pop + age + dep, data = sam)
+
+This has an adjusted R^2 of 0.7459 and an AIC of 185.0144.
+Again, step allows for lower AIC but at the expense of retaining inefficient variables.
+The following plots suggest an inconsistency in the model. Although small in observations, the residual plot is slightly concerning in that 8 of the 12 points are negative. The normal plot is offset at the rightmost points. Most telling is the cook's distance of Bolivia, which is well over 1 given a large GDP relative to its comparatively underwhelming predictor variable stats.
+
+```{r, echo=FALSE}
+sam = data[12:23, ]
+outsam = lm(formula = gdp ~ lef + pop + age + dep, data = sam)
+plot(fitted(outsam), resid(outsam), xlab= 'Fitted Values', ylab = 'Residuals')
+plot(outsam)
+
+```
+
+Removing Bolivia yields an improved model with an adjusted R2 of 0.8824 and an AIC of 160.6462. The predictor variables remain significant. We test to see if Bolivia was an outlier with predict.
+predict(outsam, data.frame(lef = 55.4, pop=7132, age = 19.1, dep = 128.3), interval = "predict", level = 1-(.05/12))
+ fit       lwr      upr
+1 -1323.752 -4071.533 1424.029
+
+This illustrates that Bolivia fits with the new model(630 fits in the interval), the issue is with its leverage moreso than its GDP disparity. 
+Nevertheless, our Bolivia-less model has an improved residual plot and is fitted normally.
+
+```{r, echo = FALSE}
+outsam = lm(formula = gdp ~ lef + pop + age + dep, data = sam[-2, ])
+plot(fitted(outsam), resid(outsam), xlab= 'Fitted Values', ylab = 'Residuals')
+plot(outsam)
+
+```
+
+Based on these data, we'd consider the model without Bolivia to be superior, but note that there is something to consider regarding an additional factor, unrelated to population, that has affected Bolivia's GDP per capita.
+
+Multi-colinearity proves a non-factor
+lef      pop      age      dep 
+3.149656 1.215085 5.004212 4.563514 
+
+CONTEMPLATING COMBO GROUP
+
+Our best model through backwards elimination is below:
+
+```{r, echo=FALSE}
+com = data[24:42, ]
+
+```
+What is immediately evident through the residual plots of our models is Switzerland's potential as an outlier. Our variables at hand do not consider details such as banking revenue, or some other outlet Switzerland has that leads it to such high GDP per capita levels. In terms of these population-based variables, Switzerland is not elite. 
+
+To prove its outlier status, we remove it from the best model involving switzerland (GDP~Birth +Infant Mortality+ Median Age), and run a bon feroni monitored prediction iterval.
+
+predict(outcom, data.frame(bir = 12.5, inf = 7.1, pop = 6814, age = 36.9), interval = "prediction", level = 1-(0.5/19))
+ fit     lwr      upr
+1 20083.67 12556.4 27610.93
+
+Switzerland's response GDP(34064) is clearly influenced in a great way by other variables and is not confidently predicted by this model. 
+The removal of Switzerland increases the predictive ability of the model and the residual shape.
+
+```{r, echo = FALSE}
+outcom= lm(gdp~bir+inf+pop+age, com)
+plot(fitted(outcom), resid(outcom), xlab= 'Fitted Values', ylab = 'Residuals', main = 'Switzerland included')
+estres = rstandard(outcom)
+qqnorm(estres, xlab = 'Theoretical Quantiles', ylab = 'Standardized Residuals', main = 'Switzerland Included')
+
+outcom1= lm(gdp~bir+inf+pop+age, com[-14, ])
+plot(fitted(outcom1), resid(outcom1), xlab= 'Fitted Values', ylab = 'Residuals', main = 'Switzerland Removed')
+estres = rstandard(outcom1)
+qqnorm(estres, xlab = 'Theoretical Quantiles', ylab = 'Standardized Residuals', main = 'Switzerland Removed')
+```
+
+vif values
+
+     bir      inf      pop      age 
+1.354181 1.123637 1.030949 1.374317 
+
+SUMMARISING SOUTHWEST ASIA
+
+Southwest Asia proved difficult as a model subject. 
+```{r, echo=FALSE}
+
+swa = data[43:53, ]
+outswa = lm(sqrt(gdp)~inf+lem+pop+dep, swa)
+plot(fitted(outswa), resid(outswa))
+```
+
+
+
+MEASURING MAINLAND ASIA
+Our best, through backwards elimination, normal mainland Asia model re-introduces our original problem of an incorrect approach. The data needs to be transformed in some way as every normal model features the same skew featured below. 
+```{r, echo=FALSE}
+asi = data[54:70, ]
+asiout = lm(gdp~bir+dea+mig+age, asi)
+summary(asiout)
+plot(fitted(asiout), resid(asiout), xlab= 'Fitted Values', ylab = 'Residuals')
+plot(asiout)
+asiout1 = lm(log(gdp)~dea+pop+mig+dep, asi)
+```
+
+Resultantly, we return to the log transformation of GDP, which again produces an improved model and residual plot.
+
+```{r, echo=FALSE}
+plot(fitted(asiout1), resid(asiout1), xlab= 'Fitted Values', ylab = 'Residuals', main = 'Transformed Data')
+plot(asiout1)
+```
+Afghanistan has a Cook's distance of above 1, which is worrying, removing it improves the model slightly but overall affects little.
+
+Analyzing Africa
+
+Using a normal analysis, we get a rather ineffective model with a low R^2 and high AIC. 
+```{r, echo=FALSE}
+afr = data[71:97, ]
+afrout1 = lm(gdp~lef+pop+age+dep, afr)
+summary(afrout1)
+afrout = lm(log(gdp)~lef, afr)
+```
+On top of that, the variables feature pronounced multicolinearity. So we scrap it and work with a log transformation again.The new model is nicer, despite amouting to one variable. Again, it proves difficult to fully explain the GDP of Africa's nations given population variables alone. The adjusted R^2 and AIC are weak compared to the other country groups.
+
+```{r, echo=FALSE}
+library("car")
+# , lib.loc="~/R/win-library/3.2"
+vif(afrout1)
+
+summary(afrout)
+plot(afrout)
+plot(fitted(afrout), resid(afrout), xlab= 'Fitted Values', ylab = 'Residuals', main = 'Africa Resiudals')
+
+```
+
+
+
